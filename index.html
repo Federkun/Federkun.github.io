@@ -1,1 +1,390 @@
-Hi
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <style>
+      input,
+      select,
+      textarea {
+        display: block;
+        padding: 10px;
+        border-width: 1px;
+        border-style: solid;
+        border-color: lightgray;
+        background-color: white;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.25em;
+      }
+      textarea {
+        width: 80%;
+        height: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="text/babel">
+      function createStaticFileDataUri(fileName, json = null) {
+        return `static-file://${fileName}${
+          json ? `?json=${JSON.stringify(json)}` : ""
+        }`;
+      }
+
+      function createPastebinDataUri(id) {
+        return `url://pastebin?id=${id}`;
+      }
+
+      const requestTypes = [
+        {
+          type: "orionPredictionModelDecision",
+          name: "Orion prediction",
+          staticFileName: "orion-prediction-model-decision-approved.json",
+          createJsonFromParameter: ({ score }) => {
+            return { scaled_score: Number(score) };
+          },
+          staticFileParameters: {
+            score: {
+              label: "Score",
+            },
+          },
+        },
+        {
+          type: "lunaPredictionModel",
+          staticFileName: "luna-prediction-model-approved.json",
+          createJsonFromParameter: ({ score }) => {
+            return { raw_score: Number(score) };
+          },
+          staticFileParameters: {
+            score: {
+              label: "Score",
+            },
+          },
+        },
+        {
+          type: "transUnionCallReport",
+          staticFileName: "trans-union-call-report-approved.xml",
+          createJsonFromParameter: () => {
+            return {};
+          },
+          staticFileParameters: {},
+        },
+        {
+          type: "transUnionCallValidate",
+          staticFileName: "trans-union-call-validate-approved.xml",
+          createJsonFromParameter: () => {
+            return {};
+          },
+          staticFileParameters: {},
+        },
+        {
+          type: "transUnionAffordabilityReport",
+          staticFileName: "trans-union-affordability-report-approved.json",
+          createJsonFromParameter: () => {
+            return {};
+          },
+          staticFileParameters: {},
+        },
+        {
+          type: "experianOauth2Token",
+          staticFileName: "experian-oauth2-token.json",
+          createJsonFromParameter: () => {
+            return {};
+          },
+          staticFileParameters: {},
+        },
+        {
+          type: "experianCreditReport",
+          staticFileName: "experian-credit-report-approved.json",
+          createJsonFromParameter: () => {
+            return {};
+          },
+          staticFileParameters: {},
+        },
+        {
+          type: "apolloCreditModel",
+          staticFileName: "apollo-credit-model-approved.json",
+          createJsonFromParameter: () => {
+            return {};
+          },
+          staticFileParameters: {},
+        },
+        {
+          type: "siriusPredictionModel",
+          staticFileName: "sirius-prediction-model-decision-approved.json",
+          createJsonFromParameter: ({ score }) => {
+            return { scaled_score: Number(score) };
+          },
+          staticFileParameters: {
+            score: {
+              label: "Score",
+            },
+          },
+        },
+        {
+          type: "orionPredictionModelBatchDecision",
+          staticFileName: "orion-prediction-model-batch-decision-approved.json",
+          createJsonFromParameter: () => {
+            return {};
+          },
+          staticFileParameters: {},
+        },
+      ];
+
+      function reducer(state, action) {
+        if (action.type === "change-source") {
+          return {
+            ...state,
+            [action.requestType]: {
+              ...state[action.requestType],
+              source:
+                action.source === "static-file"
+                  ? {
+                      type: "static-file",
+                      parameters: {},
+                    }
+                  : {
+                      type: "pastebin",
+                      id: "",
+                    },
+            },
+          };
+        }
+
+        if (action.type === "enable") {
+          return {
+            ...state,
+            [action.requestType]: {
+              ...state[action.requestType],
+              isEnabled: true,
+            },
+          };
+        }
+
+        if (action.type === "disable") {
+          return {
+            ...state,
+            [action.requestType]: {
+              ...state[action.requestType],
+              isEnabled: false,
+            },
+          };
+        }
+
+        if (action.type === "change-parameter") {
+          if (state[action.requestType].source.type !== "static-file") {
+            return state;
+          }
+
+          return {
+            ...state,
+            [action.requestType]: {
+              ...state[action.requestType],
+              source: {
+                ...state[action.requestType].source,
+                parameters: {
+                  ...state[action.requestType].source.parameters,
+                  [action.parameterName]: action.parameterValue,
+                },
+              },
+            },
+          };
+        }
+
+        if (action.type === "change-pastebin") {
+          if (state[action.requestType].source.type !== "pastebin") {
+            return state;
+          }
+
+          return {
+            ...state,
+            [action.requestType]: {
+              ...state[action.requestType],
+              source: {
+                ...state[action.requestType].source,
+                id: action.pastebinId,
+              },
+            },
+          };
+        }
+
+        return state;
+      }
+
+      function createInitialState(initialState) {
+        return requestTypes.reduce((state, requestType) => {
+          state[requestType.type] = {
+            isEnabled: true,
+            source: {
+              type: "static-file",
+              parameters: {},
+            },
+          };
+
+          return state;
+        }, initialState);
+      }
+
+      function App() {
+        const [state, dispatch] = React.useReducer(
+          reducer,
+          {},
+          createInitialState
+        );
+
+        const generateManualTestingHeader = () => {
+          const parts = requestTypes.reduce(
+            (
+              queryStringParts,
+              { type, staticFileName, createJsonFromParameter }
+            ) => {
+              const requestState = state[type];
+
+              if (!requestState.isEnabled) {
+                return queryStringParts;
+              }
+
+              if (requestState.source.type === "static-file") {
+                const parameters = JSON.parse(
+                  JSON.stringify(requestState.source.parameters)
+                );
+
+                queryStringParts[type] = createStaticFileDataUri(
+                  staticFileName,
+                  Object.keys(parameters).length === 0
+                    ? null
+                    : createJsonFromParameter(parameters)
+                );
+              }
+
+              if (requestState.source.type === "pastebin") {
+                queryStringParts[type] = createPastebinDataUri(
+                  requestState.source.id
+                );
+              }
+
+              return queryStringParts;
+            },
+            {}
+          );
+
+          const params = new URLSearchParams(parts);
+
+          return params.toString();
+        };
+
+        return (
+          <form>
+            <h1>Manual testing generator</h1>
+
+            <textarea value={generateManualTestingHeader()} />
+
+            {requestTypes.map(({ type, staticFileParameters }) => {
+              const requestState = state[type];
+
+              const enable = () =>
+                dispatch({ type: "enable", requestType: type });
+              const disable = () =>
+                dispatch({ type: "disable", requestType: type });
+
+              const switchToSource = (source) =>
+                dispatch({ type: "change-source", source, requestType: type });
+
+              return (
+                <div>
+                  <h2>{type}</h2>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      gap: "10px",
+                    }}
+                  >
+                    <label>
+                      Enabled
+                      <input
+                        type="checkbox"
+                        checked={requestState.isEnabled}
+                        onChange={requestState.isEnabled ? disable : enable}
+                      />
+                    </label>
+
+                    <label>
+                      Static file
+                      <input
+                        type="radio"
+                        checked={requestState.source.type === "static-file"}
+                        onChange={() => switchToSource("static-file")}
+                      />
+                    </label>
+
+                    <label>
+                      Pastebin
+                      <input
+                        type="radio"
+                        checked={requestState.source.type === "pastebin"}
+                        onChange={() => switchToSource("pastebin")}
+                      />
+                    </label>
+                  </div>
+
+                  {requestState.source.type === "static-file" &&
+                    Object.keys(staticFileParameters).map((parameter) => {
+                      const changeParameter = (val) =>
+                        dispatch({
+                          type: "change-parameter",
+                          requestType: type,
+                          parameterName: parameter,
+                          parameterValue: val === "" ? undefined : val,
+                        });
+
+                      const staticFileParameter =
+                        staticFileParameters[parameter];
+                      const parameterValue =
+                        requestState.source.parameters[parameter] ?? "";
+
+                      return (
+                        <label>
+                          {staticFileParameter.label}
+                          <input
+                            type="text"
+                            onChange={(event) =>
+                              changeParameter(event.target.value)
+                            }
+                            value={parameterValue}
+                          />
+                        </label>
+                      );
+                    })}
+
+                  {requestState.source.type === "pastebin" && (
+                    <label>
+                      Pastebin ID
+                      <input
+                        type="text"
+                        onChange={(event) =>
+                          dispatch({
+                            type: "change-pastebin",
+                            requestType: type,
+                            pastebinId: event.target.value,
+                          })
+                        }
+                        value={requestState.source.id}
+                      />
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </form>
+        );
+      }
+
+      ReactDOM.render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
