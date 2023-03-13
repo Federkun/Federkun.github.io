@@ -29,13 +29,13 @@
     <div id="app"></div>
     <script type="text/babel">
       function createStaticFileDataUri(fileName, json = null) {
-        return `static-file://${fileName}${
-          json ? `?json=${JSON.stringify(json)}` : ""
+        return `file://${fileName}${
+          json ? `?jsonPatch=${JSON.stringify(json)}` : ""
         }`;
       }
 
-      function createPastebinDataUri(id) {
-        return `url://pastebin?id=${id}`;
+      function createGdriveDataUri(id) {
+        return `url://gdrive?id=${id}`;
       }
 
       const requestTypes = [
@@ -147,7 +147,7 @@
                       parameters: {},
                     }
                   : {
-                      type: "pastebin",
+                      type: "gdrive",
                       id: "",
                     },
             },
@@ -194,8 +194,8 @@
           };
         }
 
-        if (action.type === "change-pastebin") {
-          if (state[action.requestType].source.type !== "pastebin") {
+        if (action.type === "change-gdrive") {
+          if (state[action.requestType].source.type !== "gdrive") {
             return state;
           }
 
@@ -205,7 +205,7 @@
               ...state[action.requestType],
               source: {
                 ...state[action.requestType].source,
-                id: action.pastebinId,
+                id: action.gdriveId,
               },
             },
           };
@@ -260,8 +260,8 @@
                 );
               }
 
-              if (requestState.source.type === "pastebin") {
-                queryStringParts[type] = createPastebinDataUri(
+              if (requestState.source.type === "gdrive") {
+                queryStringParts[type] = createGdriveDataUri(
                   requestState.source.id
                 );
               }
@@ -323,11 +323,11 @@
                     </label>
 
                     <label>
-                      Pastebin
+                      Google drive
                       <input
                         type="radio"
-                        checked={requestState.source.type === "pastebin"}
-                        onChange={() => switchToSource("pastebin")}
+                        checked={requestState.source.type === "gdrive"}
+                        onChange={() => switchToSource("gdrive")}
                       />
                     </label>
                   </div>
@@ -361,16 +361,16 @@
                       );
                     })}
 
-                  {requestState.source.type === "pastebin" && (
+                  {requestState.source.type === "gdrive" && (
                     <label>
-                      Pastebin ID
+                      Google Drive name
                       <input
                         type="text"
                         onChange={(event) =>
                           dispatch({
-                            type: "change-pastebin",
+                            type: "change-gdrive",
                             requestType: type,
-                            pastebinId: event.target.value,
+                            gdriveId: event.target.value,
                           })
                         }
                         value={requestState.source.id}
