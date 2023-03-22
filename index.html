@@ -30,12 +30,12 @@
     <script type="text/babel">
       function createStaticFileDataUri(fileName, json = null) {
         return `file://${fileName}${
-          json ? `?jsonPatch=${JSON.stringify(json)}` : ""
+          json && Object.keys(json).length > 0 ? `?jsonPatch=${JSON.stringify(json)}` : ""
         }`;
       }
 
       function createGdriveDataUri(id) {
-        return `url://gdrive?id=${id}`;
+        return `gdrive://${id}`;
       }
 
       const requestTypes = [
@@ -43,13 +43,16 @@
           type: "orionPredictionModelDecision",
           name: "Orion prediction",
           staticFileName: "orion-prediction-model-decision-approved.json",
-          createJsonFromParameter: ({ score }) => {
-            return { scaled_score: Number(score) };
+          createJsonFromParameter: ({ score, decision }) => {
+            return JSON.parse(JSON.stringify({ scaled_score: Number(score) || undefined, decision }));
           },
           staticFileParameters: {
             score: {
               label: "Score",
             },
+            decision: {
+              label: 'Decision (accept/decline)'
+            }
           },
         },
         {
